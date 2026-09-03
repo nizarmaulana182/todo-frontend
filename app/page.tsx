@@ -1,10 +1,58 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import TodoForm from './components/TodoForm';
 import TodoList from './components/TodoList';
 import { getTodos } from '@/lib/todos';
+import { Todo } from '@/types/todo';
 
-export default async function TodoPage() {
-  const todos = await getTodos();
+export default function TodoPage() {
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    async function fetchInitialTodos() {
+      try {
+        const initialTodos = await getTodos();
+        setTodos(initialTodos);
+      } catch (error) {
+        console.error('Gagal memuat todos:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchInitialTodos();
+  }, []);
+
+  const handleAddTodo = (title: string) => {
+    const newTodo: Todo = {
+      id: Date.now(),
+      title,
+      completed: false,
+      description: '', // Menambahkan properti yang hilang
+      createdAt: new Date().toISOString(), // Menambahkan properti yang hilang
+    };
+    setTodos((prev) => [newTodo, ...prev]);
+  };
+
+  const handleToggleTodo = (id: number) => {
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+    );
+  };
+
+  const handleDeleteTodo = (id: number) => {
+    setTodos((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  if (loading) {
+    return (
+      <main className="min-h-screen p-8 bg-gray-100 flex items-center justify-center">
+        <p className="text-gray-500">Memuat daftar tugas...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen p-8 bg-gray-100">
@@ -16,10 +64,14 @@ export default async function TodoPage() {
         </header>
 
         {/* Form Komponen */}
-        <TodoForm />
+        <TodoForm onAddTodo={handleAddTodo} />
 
-        {/* List Komponen yang membungkus Item */}
-        <TodoList todos={todos} />
+        {/* List Komponen */}
+        <TodoList
+          todos={todos}
+          onToggleTodo={handleToggleTodo}
+          onDeleteTodo={handleDeleteTodo}
+        />
       </div>
     </main>
   );
